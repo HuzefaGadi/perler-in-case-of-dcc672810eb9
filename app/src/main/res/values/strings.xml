@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">In Case Of</string>
+    <string name="action_settings">Settings</string>
+    <string name="camera_preferences">Camera</string>
+
+    <string name="title_preshot_delay">Pre shot delay</string>
+    <string name="summary_preshot_delay">How long to wait before shooting</string>
+    <string name="dialog_title_preshot_delay">Select pre-shot delay</string>
+
+    <string name="title_shooting_interval">Shooting interval</string>
+    <string name="summary_shooting_interval">How long to wait between shots</string>
+    <string name="dialog_title_shooting_interval">Select shooting interval</string>
+
+
+    <string name="title_exposure_adjustment">Exposure adjustment</string>
+    <string name="summary_exposure_adjustment">Underexposure &lt; Normal &lt; Overexposure</string>
+    <string name="dialog_title_exposure_adjustment">Select exposure adjustment</string>
+
+    <string name="email_preferences">E-mail</string>
+    <string name="title_email_preference">Notification E-mail</string>
+    <string name="summary_email_preference">Where your notifications are sent</string>
+    <string name="dialog_title_email_preference">Input e-mail address</string>
+
+	<string-array name="entries_preshot_delay">
+		<item>1 sec</item>
+		<item>2 sec</item>
+		<item>3 sec</item>
+		<item>4 sec</item>
+		<item>5 sec</item>
+		<item>6 hours</item>
+		<item>12 hours</item>
+		<item>1 day</item>
+	</string-array>
+
+	<string-array name="values_preshot_delay">
+		<item>1</item>
+		<item>2</item>
+		<item>3</item>
+		<item>4</item>
+		<item>5</item>
+		<item>21600</item>
+		<item>43200</item>
+		<item>86400</item>
+	</string-array>
+
+	<string-array name="entries_shooting_interval">
+		<item>3 sec</item>
+		<item>4 sec</item>
+		<item>5 sec</item>
+		<item>6 sec</item>
+		<item>7 sec</item>
+	</string-array>
+
+	<string-array name="values_shooting_interval">
+		<item>3</item>
+		<item>4</item>
+		<item>5</item>
+		<item>6</item>
+		<item>7</item>
+	</string-array>
+
+	<string-array name="entries_exposure_adjustment">
+	    <item>Underexposure</item>
+	    <item>Normal</item>
+	    <item>Overexposure</item>
+	</string-array>
+    <string name="title_activity_settings">SettingsActivity</string>
+
+    <string name="hello_world">Hello world!</string>
+	<string name="recipients">Recipients</string>
+	<string name="email_hint">Enter Recipients Email Addresses</string>
+	<string name="address_book">Address Book</string>
+	<string name="camera_settings">Camera Settings</string>
+	<string name="flash_settings">Flash Settings</string>
+	<string name="shot_interval">Shot Interval</string>
+
+</resources>

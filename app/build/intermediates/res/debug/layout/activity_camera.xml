@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical">
+
+    <SurfaceView
+        android:id="@+id/camera_surface"
+        android:layout_alignParentTop="true"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:layout_alignParentRight="true"></SurfaceView>
+
+    <Button
+        android:id="@+id/settings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:text="Settings" />
+
+</RelativeLayout><!-- From: file:/Users/Rashida/Desktop/Android%20Projects/perler-in-case-of-dcc672810eb9/app/src/main/res/layout/activity_camera.xml -->
