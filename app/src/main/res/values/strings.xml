@@ -70,10 +70,12 @@
 
     <string name="hello_world">Hello world!</string>
 	<string name="recipients">Recipients</string>
-	<string name="email_hint">Enter Recipients Email Addresses</string>
+	<string name="email_hint">Enter Recipients Email Addresses separating them with (;)semicolon</string>
 	<string name="address_book">Address Book</string>
 	<string name="camera_settings">Camera Settings</string>
 	<string name="flash_settings">Flash Settings</string>
 	<string name="shot_interval">Shot Interval</string>
+	<string name="exposure">Exposure</string>
+	<string name="save">Save</string>
 
 </resources>
