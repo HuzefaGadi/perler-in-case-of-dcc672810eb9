@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.ImageFormat;
 import android.graphics.PixelFormat;
 import android.hardware.Camera;
@@ -57,12 +58,17 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
     String username = "incaseofapp@gmail.com";
     String password = "Q%66x#C855a&";
     Button settings;
+    String fileNames[];
+    StringBuilder st;
+
+    SharedPreferences preferences;
 
     private double altitude = 0, latitude = 0, longitude = 0;
 
     boolean mPreviewRunning = false;
     private Context mContext = this;
     Camera mCamera;
+    int countOfPicturesTaken;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -74,7 +80,10 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
             latitude = extras.getDouble("latitude", 0.0);
             longitude = extras.getDouble("longitude", 0.0);
         }
-
+        st = new StringBuilder();
+        countOfPicturesTaken = 0;
+        fileNames = new String[10];
+        preferences = getSharedPreferences(InCaseOfApp.PREFERENCES, MODE_PRIVATE);
         getWindow().setFormat(PixelFormat.TRANSLUCENT);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -102,22 +111,26 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
         mSurfaceHolder = mSurfaceView.getHolder();
         mSurfaceHolder.addCallback(this);
         mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        final int delay = preferences.getInt(InCaseOfApp.SHOOTING_INTERVAL, 0);
 
-        final int delay = Integer.parseInt(InCaseOfApp.preferences.getString("preshot_delay", "2"));
-        final int period = Integer.parseInt(InCaseOfApp.preferences.getString("shooting_interval", "5"));
-        /*new Timer().scheduleAtFixedRate(new TimerTask() {
+        final Timer timer = new Timer();
+        timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+                        if (countOfPicturesTaken == 9) {
+                            timer.cancel();
+                        }
                         if (mCamera != null) {
+
                             mCamera.takePicture(null, null, mPictureCallback);    // shutter, raw, jpg
                         }
                     }
                 });
             }
-        }, delay * 1000, period * 1000);*/
+        }, delay * 1000, delay * 3 * 1000);
     }
 
     @Override
@@ -146,7 +159,6 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
 
     Camera.PictureCallback mPictureCallback = new Camera.PictureCallback() {
         public void onPictureTaken(byte[] imageData, Camera c) {
-
             mCamera.startPreview();
             mPreviewRunning = true;
 
@@ -184,13 +196,19 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
                         e.printStackTrace();
                     }
                 }
-                String[] filenames = {filename};
 
+                st.append(filename + ":" + "http://maps.google.com/?ie=UTF&hq=&II=" + "100" + "," + "200");
+                st.append("\n");
 
-                //new UploadFileTask().execute(filenames);
+                fileNames[countOfPicturesTaken] = filename;
 
-                sendMail("learndroid53@gmail.com", "test", "test", filenames);
+                if (countOfPicturesTaken == 2) {
+                    sendMail("test", st.toString(), fileNames);
+                } else if (countOfPicturesTaken == 9) {
+                    sendMail("test", st.toString(), fileNames);
+                }
 
+                countOfPicturesTaken++;
 //				Intent intent = new Intent();
 //				intent.putExtra( "IMAGE_FILE", filename);
 //				setResult( RESULT_OK, intent);
@@ -221,7 +239,6 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
             mCamera.stopPreview();
         }
 
-        final boolean use_flash = InCaseOfApp.preferences.getBoolean("camera_flash", false);
 
         Camera.Parameters p = mCamera.getParameters();
         Log.i(TAG, "camera params:" + p.flatten());
@@ -233,15 +250,29 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
 //			p.setPreviewSize(h, w);
 //			p.setRotation(90);
 //		}
+        int flash = preferences.getInt(InCaseOfApp.SHOOTING_FLASH, 0);
+        switch (flash) {
+            case 1:
+                p.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
+                break;
+            case 2:
+                p.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+                break;
+            case 0:
+                p.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
+                break;
+            default:
+                p.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
+        }
         p.setRotation(90);    // -- landscape?
         p.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-        p.setFlashMode(use_flash ? Camera.Parameters.FLASH_MODE_ON : Camera.Parameters.FLASH_MODE_OFF);
+        //p.setFlashMode(use_flash ? Camera.Parameters.FLASH_MODE_ON : Camera.Parameters.FLASH_MODE_OFF);
 //		p.set("flash-mode", Camera.Parameters.FLASH_MODE_OFF);	// "auto" ?
-        final String exposure = InCaseOfApp.preferences.getString("exposure_adjustment", "Normal");
-        if (exposure.equalsIgnoreCase("Underexposure")) {
+        final int exposure = preferences.getInt(InCaseOfApp.SHOOTING_EXPOSURE,0);
+        if (exposure==1) {
             p.setExposureCompensation(p.getMinExposureCompensation() / 2);
         }
-        if (exposure.equalsIgnoreCase("Overexposure")) {
+        if (exposure==2) {
             p.setExposureCompensation(p.getMaxExposureCompensation() / 2);
         }
 
@@ -293,23 +324,28 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
         mCamera = null;
     }
 
-    private void sendMail(String email, String subject, String messageBody, String[] imagePaths) {
+    private void sendMail(String subject, String messageBody, String[] imagePaths) {
         Session session = createSessionObject();
 
         try {
-            Message message = createMessage(email, subject, messageBody, session);
-            Multipart multipart = new MimeMultipart();
 
-            for (int i = 0; i < imagePaths.length; i++) {
+            Message message = createMessage(subject, messageBody, session);
+            Multipart multipart = new MimeMultipart();
+            int size = imagePaths.length;
+            MimeBodyPart messageText = new MimeBodyPart();
+            messageText.setText(messageBody);
+            multipart.addBodyPart(messageText);
+            for (int i = 0; i <= countOfPicturesTaken; i++) {
                 MimeBodyPart messageBodyPart = new MimeBodyPart();
-                messageBodyPart = new MimeBodyPart();
-                String file = InCaseOfApp.getContext().getFileStreamPath(imagePaths[i]).getAbsolutePath();
+
+                String file = getApplicationContext().getFileStreamPath(imagePaths[i]).getAbsolutePath();
                 String fileName = imagePaths[i];
                 FileDataSource source = new FileDataSource(file);
                 messageBodyPart.setDataHandler(new DataHandler(source));
                 messageBodyPart.setFileName(fileName);
                 multipart.addBodyPart(messageBodyPart);
             }
+
             message.setContent(multipart);
 
             new SendMailTask().execute(message);
@@ -322,11 +358,14 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
         }
     }
 
-    private Message createMessage(String email, String subject, String messageBody, Session session) throws MessagingException, UnsupportedEncodingException {
+    private Message createMessage(String subject, String messageBody, Session session) throws MessagingException, UnsupportedEncodingException {
         Message message = new MimeMessage(session);
         message.setFrom(new InternetAddress(username, password));
-        message.addRecipient(Message.RecipientType.TO, new InternetAddress(email, email));
+        InternetAddress[] addresses = InternetAddress.parse(preferences.getString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, ""));
+        System.out.println("Message"+messageBody);
+        message.addRecipients(Message.RecipientType.TO, addresses);
         message.setSubject(subject);
+
         message.setText(messageBody);
 
 
