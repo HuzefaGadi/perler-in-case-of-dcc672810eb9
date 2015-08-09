@@ -15,6 +15,8 @@ public class InCaseOfApp extends Application {
     public static String SHOOTING_FLASH = "flash";
     public static String SHOOTING_EXPOSURE = "exposure";
     public static String PREFERENCES = "preferences";
+    public static String PASSWORD = "password";
+
 
     public static String android_id;
 

@@ -21,7 +21,7 @@ import android.widget.Toast;
 public class SettingsActivity extends ActionBarActivity {
 
     Button addressBook, save;
-    EditText emailAddresses, interval;
+    EditText emailAddresses, interval,password;
     Spinner exposure;
     RadioGroup radioGroup;
     SharedPreferences preferences;
@@ -37,11 +37,13 @@ public class SettingsActivity extends ActionBarActivity {
         save = (Button) findViewById(R.id.save);
         addressBook = (Button) findViewById(R.id.address_book);
         emailAddresses = (EditText) findViewById(R.id.emailAddress);
+        password = (EditText)findViewById(R.id.password);
         preferences = getSharedPreferences(InCaseOfApp.PREFERENCES, MODE_PRIVATE);
         edit = preferences.edit();
         emailAddresses.setText(preferences.getString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, ""));
-        interval.setText(preferences.getInt(InCaseOfApp.SHOOTING_INTERVAL, 0) + "");
+        interval.setText(preferences.getInt(InCaseOfApp.SHOOTING_INTERVAL, 2) + "");
         exposure.setSelection(preferences.getInt(InCaseOfApp.SHOOTING_EXPOSURE, 0));
+        password.setText(preferences.getString(InCaseOfApp.PASSWORD,"000000"));
         int flash = preferences.getInt(InCaseOfApp.SHOOTING_FLASH, 0);
         switch (flash) {
             case 1:
@@ -89,6 +91,7 @@ public class SettingsActivity extends ActionBarActivity {
                 edit.putInt(InCaseOfApp.SHOOTING_FLASH, flash);
                 edit.putInt(InCaseOfApp.SHOOTING_EXPOSURE,exposure.getSelectedItemPosition());
                 edit.putString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, emailAddresses.getText().toString().trim());
+                edit.putString(InCaseOfApp.PASSWORD,password.getText().toString());
                 edit.commit();
 
                 Toast.makeText(getApplicationContext(), "Saved successfully", Toast.LENGTH_LONG).show();

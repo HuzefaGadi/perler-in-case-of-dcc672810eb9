@@ -1,8 +1,10 @@
 package com.lazydroid.incaseof;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.ImageFormat;
@@ -16,13 +18,20 @@ import android.media.ExifInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesClient;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -49,7 +58,16 @@ import javax.mail.internet.MimeMultipart;
 import javax.sql.DataSource;
 
 
-public class CameraActivity extends Activity implements SurfaceHolder.Callback {
+public class CameraActivity extends Activity implements SurfaceHolder.Callback,
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+
+
+    protected GoogleApiClient mGoogleApiClient;
+
+    /**
+     * Represents a geographical location.
+     */
+    protected Location mLastLocation;
 
     private static final float MAX_PICTURE_SIZE = 2.5f;    // megapixels
     private static final String TAG = "CameraActivity";
@@ -69,10 +87,13 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
     private Context mContext = this;
     Camera mCamera;
     int countOfPicturesTaken;
+    Timer timer;
+    AlertDialog alertDialog;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
 
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
@@ -80,6 +101,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
             latitude = extras.getDouble("latitude", 0.0);
             longitude = extras.getDouble("longitude", 0.0);
         }
+        buildGoogleApiClient();
         st = new StringBuilder();
         countOfPicturesTaken = 0;
         fileNames = new String[10];
@@ -89,17 +111,60 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_camera);
+
+        String emailAddress = preferences.getString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, "");
+
+
+        LayoutInflater li = LayoutInflater.from(this);
+        View promptsView = li.inflate(R.layout.prompt, null);
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+        AlertDialog.Builder alertDialogBuilderForResetPassword = new AlertDialog.Builder(this);
+        // set prompts.xml to alertdialog builder
+        alertDialogBuilder.setView(promptsView);
+        final EditText userInput = (EditText) promptsView.findViewById(R.id.editText1);
+        alertDialogBuilder.setCancelable(false).setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // get user input and set it to result
+                // edit text
+                String userPassword = userInput.getText().toString();
+                String password = preferences.getString(InCaseOfApp.PASSWORD, "000000");
+
+                if (userPassword.equals(password)) {
+                    Intent intent = new Intent(CameraActivity.this, SettingsActivity.class);
+                    startActivity(intent);
+                    alertDialog.hide();
+                } else {
+                    Toast.makeText(mContext, "Incorrect Password", Toast.LENGTH_LONG).show();
+                }
+
+                userInput.setText("");
+            }
+        })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        userInput.setText("");
+                        alertDialog.hide();
+
+                    }
+                });
+
+        // create alert dialog
+        alertDialog = alertDialogBuilder.create();
         settings = (Button) findViewById(R.id.settings);
         settings.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(CameraActivity.this, SettingsActivity.class);
-                startActivity(intent);
+                alertDialog.show();
             }
         });
 
-        mSurfaceView = (SurfaceView) findViewById(R.id.camera_surface);
+
+        if (emailAddress.isEmpty()) {
+            Toast.makeText(this, "Please provide email addresses and other factors to continue", Toast.LENGTH_LONG).show();
+            settings.performClick();
+        } else {
+            mSurfaceView = (SurfaceView) findViewById(R.id.camera_surface);
 //		mSurfaceView.setOnTouchListener(new View.OnTouchListener() {
 //			@Override
 //			public boolean onTouch(View v, MotionEvent event) {
@@ -108,29 +173,85 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
 //			}
 //		});
 
-        mSurfaceHolder = mSurfaceView.getHolder();
-        mSurfaceHolder.addCallback(this);
-        mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-        final int delay = preferences.getInt(InCaseOfApp.SHOOTING_INTERVAL, 0);
+            mSurfaceHolder = mSurfaceView.getHolder();
+            mSurfaceHolder.addCallback(this);
+            mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+            final int delay = preferences.getInt(InCaseOfApp.SHOOTING_INTERVAL, 2);
 
-        final Timer timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (countOfPicturesTaken == 9) {
-                            timer.cancel();
-                        }
-                        if (mCamera != null) {
+            timer = new Timer();
+            timer.scheduleAtFixedRate(task, delay * 1000, delay * 1 * 1000);
 
-                            mCamera.takePicture(null, null, mPictureCallback);    // shutter, raw, jpg
-                        }
+        }
+
+
+    }
+
+    TimerTask task = new TimerTask() {
+        @Override
+        public void run() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (countOfPicturesTaken == 9) {
+                        timer.cancel();
                     }
-                });
-            }
-        }, delay * 1000, delay * 3 * 1000);
+                    if (mCamera != null) {
+
+                        mCamera.takePicture(null, null, mPictureCallback);    // shutter, raw, jpg
+                    }
+                }
+            });
+        }
+    };
+
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
+    }
+
+    /**
+     * Runs when a GoogleApiClient object successfully connects.
+     */
+    @Override
+    public void onConnected(Bundle connectionHint) {
+        // Provides a simple way of getting a device's location and is well suited for
+        // applications that do not require a fine-grained location and that do not need location
+        // updates. Gets the best and most recent location currently available, which may be null
+        // in rare cases when a location is not available.
+
+    }
+
+
+    @Override
+    public void onConnectionSuspended(int cause) {
+        // The connection to Google Play services was lost for some reason. We call connect() to
+        // attempt to re-establish the connection.
+        Log.i(TAG, "Connection suspended");
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult result) {
+        // Refer to the javadoc for ConnectionResult to see what error codes might be returned in
+        // onConnectionFailed.
+        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
+        }
     }
 
     @Override
@@ -197,15 +318,28 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
                     }
                 }
 
-                st.append(filename + ":" + "http://maps.google.com/?ie=UTF&hq=&II=" + "100" + "," + "200");
+                mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+                String latitude = "NOT FOUND";
+                String longitude = "NOT FOUND";
+                if (mLastLocation != null) {
+                    latitude = String.valueOf(mLastLocation.getLatitude());
+                    longitude = String.valueOf(mLastLocation.getLongitude());
+                } else {
+                    //Toast.makeText(this, R.string.no_location_detected, Toast.LENGTH_LONG).show();
+                }
+                if (countOfPicturesTaken == 3) {
+                    st = new StringBuilder();
+                }
+                st.append(filename + ":" + "http://maps.google.com/?ie=UTF&hq=&II=" + latitude + "," + longitude);
                 st.append("\n");
 
                 fileNames[countOfPicturesTaken] = filename;
 
                 if (countOfPicturesTaken == 2) {
-                    sendMail("test", st.toString(), fileNames);
+                    sendMail("Pictures Taken", st.toString(), fileNames);
                 } else if (countOfPicturesTaken == 9) {
-                    sendMail("test", st.toString(), fileNames);
+
+                    sendMail("Pictures Taken", st.toString(), fileNames);
                 }
 
                 countOfPicturesTaken++;
@@ -268,11 +402,11 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
         p.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
         //p.setFlashMode(use_flash ? Camera.Parameters.FLASH_MODE_ON : Camera.Parameters.FLASH_MODE_OFF);
 //		p.set("flash-mode", Camera.Parameters.FLASH_MODE_OFF);	// "auto" ?
-        final int exposure = preferences.getInt(InCaseOfApp.SHOOTING_EXPOSURE,0);
-        if (exposure==1) {
+        final int exposure = preferences.getInt(InCaseOfApp.SHOOTING_EXPOSURE, 0);
+        if (exposure == 1) {
             p.setExposureCompensation(p.getMinExposureCompensation() / 2);
         }
-        if (exposure==2) {
+        if (exposure == 2) {
             p.setExposureCompensation(p.getMaxExposureCompensation() / 2);
         }
 
@@ -335,9 +469,13 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
             MimeBodyPart messageText = new MimeBodyPart();
             messageText.setText(messageBody);
             multipart.addBodyPart(messageText);
-            for (int i = 0; i <= countOfPicturesTaken; i++) {
-                MimeBodyPart messageBodyPart = new MimeBodyPart();
+            int i = 0;
+            if (countOfPicturesTaken >= 3) {
+                i = 3;
+            }
+            for (; i <= countOfPicturesTaken; i++) {
 
+                MimeBodyPart messageBodyPart = new MimeBodyPart();
                 String file = getApplicationContext().getFileStreamPath(imagePaths[i]).getAbsolutePath();
                 String fileName = imagePaths[i];
                 FileDataSource source = new FileDataSource(file);
@@ -360,9 +498,9 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback {
 
     private Message createMessage(String subject, String messageBody, Session session) throws MessagingException, UnsupportedEncodingException {
         Message message = new MimeMessage(session);
-        message.setFrom(new InternetAddress(username, password));
+        message.setFrom(new InternetAddress(username, "InCaseOfApp"));
         InternetAddress[] addresses = InternetAddress.parse(preferences.getString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, ""));
-        System.out.println("Message"+messageBody);
+        System.out.println("Message" + messageBody);
         message.addRecipients(Message.RecipientType.TO, addresses);
         message.setSubject(subject);
 

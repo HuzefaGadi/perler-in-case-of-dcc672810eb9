@@ -62,8 +62,9 @@
 	</string-array>
 
 	<string-array name="entries_exposure_adjustment">
+		<item>Normal</item>
 	    <item>Underexposure</item>
-	    <item>Normal</item>
+
 	    <item>Overexposure</item>
 	</string-array>
     <string name="title_activity_settings">SettingsActivity</string>
@@ -77,5 +78,6 @@
 	<string name="shot_interval">Shot Interval</string>
 	<string name="exposure">Exposure</string>
 	<string name="save">Save</string>
+	<string name="password">Password</string>
 
 </resources>
