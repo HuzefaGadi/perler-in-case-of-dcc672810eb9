@@ -1,4 +1,4 @@
-package com.lazydroid.incaseof;
+package com.esspro.ico;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
@@ -31,6 +31,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.esspro.ico.InCaseOfApp;
+import com.esspro.ico.R;
+import com.esspro.ico.SettingsActivity;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.common.api.GoogleApiClient;
