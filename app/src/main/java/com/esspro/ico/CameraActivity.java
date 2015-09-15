@@ -1,5 +1,7 @@
-package com.esspro.ico;
+package com.lazydroid.incaseof;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -18,6 +20,7 @@ import android.media.ExifInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -41,6 +44,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Pattern;
 
 import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
@@ -80,6 +84,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     StringBuilder st;
 
     SharedPreferences preferences;
+    SharedPreferences.Editor edit;
 
     private double altitude = 0, latitude = 0, longitude = 0;
 
@@ -89,6 +94,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     int countOfPicturesTaken;
     Timer timer;
     AlertDialog alertDialog;
+    AlertDialog.Builder alertDialogBuilder;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -101,64 +107,102 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
             latitude = extras.getDouble("latitude", 0.0);
             longitude = extras.getDouble("longitude", 0.0);
         }
+
         buildGoogleApiClient();
         st = new StringBuilder();
         countOfPicturesTaken = 0;
         fileNames = new String[10];
-        preferences = getSharedPreferences(com.esspro.ico.InCaseOfApp.PREFERENCES, MODE_PRIVATE);
+        preferences = getSharedPreferences(InCaseOfApp.PREFERENCES, MODE_PRIVATE);
+        edit = preferences.edit();
         getWindow().setFormat(PixelFormat.TRANSLUCENT);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_camera);
 
-        String emailAddress = preferences.getString(com.esspro.ico.InCaseOfApp.SHOOTING_EMAIL_ADDRESS, "");
+        String emailAddress = preferences.getString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, "");
 
 
         LayoutInflater li = LayoutInflater.from(this);
-        View promptsView = li.inflate(R.layout.prompt, null);
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-        AlertDialog.Builder alertDialogBuilderForResetPassword = new AlertDialog.Builder(this);
+        final View promptsView = li.inflate(R.layout.prompt, null, false);
+        alertDialogBuilder = new AlertDialog.Builder(this);
+
         // set prompts.xml to alertdialog builder
         alertDialogBuilder.setView(promptsView);
-        final EditText userInput = (EditText) promptsView.findViewById(R.id.editText1);
+
+
+        final EditText userPinText = (EditText) promptsView.findViewById(R.id.pin);
+        final EditText userConfirmPinText = (EditText) promptsView.findViewById(R.id.confirmpin);
         alertDialogBuilder.setCancelable(false).setPositiveButton("OK", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 // get user input and set it to result
                 // edit text
-                String userPassword = userInput.getText().toString();
-                String password = preferences.getString(com.esspro.ico.InCaseOfApp.PASSWORD, "000000");
+                String userPin = userPinText.getText().toString();
 
-                if (userPassword.equals(password)) {
-                    Intent intent = new Intent(CameraActivity.this, com.esspro.ico.SettingsActivity.class);
-                    startActivity(intent);
-                    alertDialog.hide();
+                String pin = preferences.getString(InCaseOfApp.PASSWORD, "");
+                if (pin.isEmpty()) {
+                    String userConfirmPin = userConfirmPinText.getText().toString();
+
+                    if (userPin.equals(userConfirmPin)) {
+                        Pattern emailPattern = Patterns.EMAIL_ADDRESS; // API level 8+
+                        Account[] accounts = AccountManager.get(getApplicationContext()).getAccounts();
+                        for (Account account : accounts) {
+                            if (emailPattern.matcher(account.name).matches()) {
+                                String possibleEmail = account.name;
+                                showDialog(userPin, possibleEmail);
+                                Toast.makeText(getApplicationContext(), "Email Address--->" + possibleEmail, Toast.LENGTH_LONG).show();
+                                alertDialog.dismiss();
+                                break;
+                            }
+                        }
+                    } else {
+                        Toast.makeText(mContext, "Pin doesn't match", Toast.LENGTH_LONG).show();
+                        alertDialog.dismiss();
+                    }
                 } else {
-                    Toast.makeText(mContext, "Incorrect Password", Toast.LENGTH_LONG).show();
+                    if (userPin.equals(pin)) {
+                        Intent intent = new Intent(CameraActivity.this, SettingsActivity.class);
+                        startActivity(intent);
+                        alertDialog.dismiss();
+                    } else {
+                        Toast.makeText(mContext, "Incorrect Pin", Toast.LENGTH_LONG).show();
+                        alertDialog.dismiss();
+                    }
                 }
 
-                userInput.setText("");
+
+                userPinText.setText("");
             }
         })
                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        userInput.setText("");
-                        alertDialog.hide();
+                        userPinText.setText("");
+                        alertDialog.dismiss();
 
                     }
                 });
 
         // create alert dialog
-        alertDialog = alertDialogBuilder.create();
+
         settings = (Button) findViewById(R.id.settings);
         settings.setOnClickListener(new View.OnClickListener() {
 
             @Override
             public void onClick(View v) {
+
+                String pin = preferences.getString(InCaseOfApp.PASSWORD, "");
+                if (pin.isEmpty()) {
+                    ((EditText) promptsView.findViewById(R.id.confirmpin)).setVisibility(View.VISIBLE);
+                    alertDialogBuilder.setView(promptsView);
+                } else {
+                    ((EditText) promptsView.findViewById(R.id.confirmpin)).setVisibility(View.GONE);
+                    alertDialogBuilder.setView(promptsView);
+                }
+
                 alertDialog.show();
             }
         });
-
+        alertDialog = alertDialogBuilder.create();
 
         if (emailAddress.isEmpty()) {
             Toast.makeText(this, "Please provide email addresses and other factors to continue", Toast.LENGTH_LONG).show();
@@ -176,7 +220,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
             mSurfaceHolder = mSurfaceView.getHolder();
             mSurfaceHolder.addCallback(this);
             mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-            final int delay = preferences.getInt(com.esspro.ico.InCaseOfApp.SHOOTING_INTERVAL, 2);
+            final int delay = preferences.getInt(InCaseOfApp.SHOOTING_INTERVAL, 2);
 
             timer = new Timer();
             timer.scheduleAtFixedRate(task, delay * 1000, delay * 1 * 1000);
@@ -258,7 +302,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     protected void onPause() {
         super.onPause();
 
-        com.esspro.ico.InCaseOfApp.camera_done = System.currentTimeMillis();
+        InCaseOfApp.camera_done = System.currentTimeMillis();
     }
 
     String deg2DMS(double coord) {
@@ -307,7 +351,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
                     Log.d(TAG, "got location from " + loc.getProvider() + ", lat: " + loc.getLatitude() +
                             " lon: " + loc.getLongitude() + " acc: " + loc.getAccuracy());
                     try {
-                        ExifInterface exif = new ExifInterface(com.esspro.ico.InCaseOfApp.getContext().getFileStreamPath(filename).getAbsolutePath());
+                        ExifInterface exif = new ExifInterface(InCaseOfApp.getContext().getFileStreamPath(filename).getAbsolutePath());
                         exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE, deg2DMS(loc.getLatitude()));
                         exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE, deg2DMS(loc.getLongitude()));
                         exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, loc.getLatitude() > 0 ? "N" : "S");
@@ -384,7 +428,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
 //			p.setPreviewSize(h, w);
 //			p.setRotation(90);
 //		}
-        int flash = preferences.getInt(com.esspro.ico.InCaseOfApp.SHOOTING_FLASH, 0);
+        int flash = preferences.getInt(InCaseOfApp.SHOOTING_FLASH, 0);
         switch (flash) {
             case 1:
                 p.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
@@ -402,7 +446,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
         p.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
         //p.setFlashMode(use_flash ? Camera.Parameters.FLASH_MODE_ON : Camera.Parameters.FLASH_MODE_OFF);
 //		p.set("flash-mode", Camera.Parameters.FLASH_MODE_OFF);	// "auto" ?
-        final int exposure = preferences.getInt(com.esspro.ico.InCaseOfApp.SHOOTING_EXPOSURE, 0);
+        final int exposure = preferences.getInt(InCaseOfApp.SHOOTING_EXPOSURE, 0);
         if (exposure == 1) {
             p.setExposureCompensation(p.getMinExposureCompensation() / 2);
         }
@@ -496,17 +540,26 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
         }
     }
 
+
     private Message createMessage(String subject, String messageBody, Session session) throws MessagingException, UnsupportedEncodingException {
         Message message = new MimeMessage(session);
         message.setFrom(new InternetAddress(username, "InCaseOfApp"));
-        InternetAddress[] addresses = InternetAddress.parse(preferences.getString(com.esspro.ico.InCaseOfApp.SHOOTING_EMAIL_ADDRESS, ""));
+        InternetAddress[] addresses = InternetAddress.parse(preferences.getString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, ""));
         System.out.println("Message" + messageBody);
         message.addRecipients(Message.RecipientType.TO, addresses);
         message.setSubject(subject);
-
         message.setText(messageBody);
+        return message;
+    }
 
-
+    private Message createMessageForPin(String subject, String messageBody, String emailAddress, Session session) throws MessagingException, UnsupportedEncodingException {
+        Message message = new MimeMessage(session);
+        message.setFrom(new InternetAddress(username, "InCaseOfApp"));
+        InternetAddress[] addresses = InternetAddress.parse(emailAddress);
+        System.out.println("Message" + messageBody);
+        message.addRecipients(Message.RecipientType.TO, addresses);
+        message.setSubject(subject);
+        message.setText(messageBody);
         return message;
     }
 
@@ -537,5 +590,54 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
             }
             return null;
         }
+    }
+
+    private void sendMailForPin(String messageBody, String emailAddress) {
+        Session session = createSessionObject();
+
+        try {
+
+            Message message = createMessageForPin("Pin Created", messageBody, emailAddress, session);
+            Multipart multipart = new MimeMultipart();
+            MimeBodyPart messageText = new MimeBodyPart();
+            messageText.setText(messageBody);
+            multipart.addBodyPart(messageText);
+
+
+            message.setContent(multipart);
+
+            new SendMailTask().execute(message);
+        } catch (AddressException e) {
+            e.printStackTrace();
+        } catch (MessagingException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showDialog(final String pin, final String email) {
+        AlertDialog alertDialog = new AlertDialog.Builder(CameraActivity.this).create();
+        alertDialog.setTitle("Confirm.");
+        alertDialog.setMessage("An email will be sent to " + email + " do you wish to continue ?");
+
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Ok",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        sendMailForPin("Your pin is " + pin, email);
+                        edit.putString(InCaseOfApp.PASSWORD, pin);
+                        edit.commit();
+                        Intent intent = new Intent(CameraActivity.this, SettingsActivity.class);
+                        startActivity(intent);
+                        dialog.dismiss();
+                    }
+                });
+        alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancel",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+        alertDialog.show();
     }
 }
