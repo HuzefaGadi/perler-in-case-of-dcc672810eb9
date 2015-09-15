@@ -1,4 +1,4 @@
-package com.lazydroid.incaseof;
+package com.esspro.ico;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -105,14 +105,14 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
         st = new StringBuilder();
         countOfPicturesTaken = 0;
         fileNames = new String[10];
-        preferences = getSharedPreferences(InCaseOfApp.PREFERENCES, MODE_PRIVATE);
+        preferences = getSharedPreferences(com.esspro.ico.InCaseOfApp.PREFERENCES, MODE_PRIVATE);
         getWindow().setFormat(PixelFormat.TRANSLUCENT);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_camera);
 
-        String emailAddress = preferences.getString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, "");
+        String emailAddress = preferences.getString(com.esspro.ico.InCaseOfApp.SHOOTING_EMAIL_ADDRESS, "");
 
 
         LayoutInflater li = LayoutInflater.from(this);
@@ -127,10 +127,10 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
                 // get user input and set it to result
                 // edit text
                 String userPassword = userInput.getText().toString();
-                String password = preferences.getString(InCaseOfApp.PASSWORD, "000000");
+                String password = preferences.getString(com.esspro.ico.InCaseOfApp.PASSWORD, "000000");
 
                 if (userPassword.equals(password)) {
-                    Intent intent = new Intent(CameraActivity.this, SettingsActivity.class);
+                    Intent intent = new Intent(CameraActivity.this, com.esspro.ico.SettingsActivity.class);
                     startActivity(intent);
                     alertDialog.hide();
                 } else {
@@ -176,7 +176,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
             mSurfaceHolder = mSurfaceView.getHolder();
             mSurfaceHolder.addCallback(this);
             mSurfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-            final int delay = preferences.getInt(InCaseOfApp.SHOOTING_INTERVAL, 2);
+            final int delay = preferences.getInt(com.esspro.ico.InCaseOfApp.SHOOTING_INTERVAL, 2);
 
             timer = new Timer();
             timer.scheduleAtFixedRate(task, delay * 1000, delay * 1 * 1000);
@@ -258,7 +258,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     protected void onPause() {
         super.onPause();
 
-        InCaseOfApp.camera_done = System.currentTimeMillis();
+        com.esspro.ico.InCaseOfApp.camera_done = System.currentTimeMillis();
     }
 
     String deg2DMS(double coord) {
@@ -307,7 +307,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
                     Log.d(TAG, "got location from " + loc.getProvider() + ", lat: " + loc.getLatitude() +
                             " lon: " + loc.getLongitude() + " acc: " + loc.getAccuracy());
                     try {
-                        ExifInterface exif = new ExifInterface(InCaseOfApp.getContext().getFileStreamPath(filename).getAbsolutePath());
+                        ExifInterface exif = new ExifInterface(com.esspro.ico.InCaseOfApp.getContext().getFileStreamPath(filename).getAbsolutePath());
                         exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE, deg2DMS(loc.getLatitude()));
                         exif.setAttribute(ExifInterface.TAG_GPS_LONGITUDE, deg2DMS(loc.getLongitude()));
                         exif.setAttribute(ExifInterface.TAG_GPS_LATITUDE_REF, loc.getLatitude() > 0 ? "N" : "S");
@@ -384,7 +384,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
 //			p.setPreviewSize(h, w);
 //			p.setRotation(90);
 //		}
-        int flash = preferences.getInt(InCaseOfApp.SHOOTING_FLASH, 0);
+        int flash = preferences.getInt(com.esspro.ico.InCaseOfApp.SHOOTING_FLASH, 0);
         switch (flash) {
             case 1:
                 p.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
@@ -402,7 +402,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
         p.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
         //p.setFlashMode(use_flash ? Camera.Parameters.FLASH_MODE_ON : Camera.Parameters.FLASH_MODE_OFF);
 //		p.set("flash-mode", Camera.Parameters.FLASH_MODE_OFF);	// "auto" ?
-        final int exposure = preferences.getInt(InCaseOfApp.SHOOTING_EXPOSURE, 0);
+        final int exposure = preferences.getInt(com.esspro.ico.InCaseOfApp.SHOOTING_EXPOSURE, 0);
         if (exposure == 1) {
             p.setExposureCompensation(p.getMinExposureCompensation() / 2);
         }
@@ -499,7 +499,7 @@ public class CameraActivity extends Activity implements SurfaceHolder.Callback,
     private Message createMessage(String subject, String messageBody, Session session) throws MessagingException, UnsupportedEncodingException {
         Message message = new MimeMessage(session);
         message.setFrom(new InternetAddress(username, "InCaseOfApp"));
-        InternetAddress[] addresses = InternetAddress.parse(preferences.getString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, ""));
+        InternetAddress[] addresses = InternetAddress.parse(preferences.getString(com.esspro.ico.InCaseOfApp.SHOOTING_EMAIL_ADDRESS, ""));
         System.out.println("Message" + messageBody);
         message.addRecipients(Message.RecipientType.TO, addresses);
         message.setSubject(subject);

@@ -5,7 +5,7 @@ android {
     buildToolsVersion "22.0.1"
 
     defaultConfig {
-        applicationId "com.lazydroid.incaseof"
+        applicationId "com.esspro.ico"
         minSdkVersion 9
         targetSdkVersion 21
     }

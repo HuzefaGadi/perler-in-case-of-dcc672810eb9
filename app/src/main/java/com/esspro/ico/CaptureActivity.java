@@ -1,4 +1,4 @@
-package com.lazydroid.incaseof;
+package com.esspro.ico;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -30,7 +30,7 @@ public class CaptureActivity extends Activity {
 					runOnUiThread(new Runnable() {
 						@Override
 						public void run() {
-							startActivity( new Intent(CaptureActivity.this, CameraActivity.class) );
+							startActivity( new Intent(CaptureActivity.this, com.esspro.ico.CameraActivity.class) );
 						}
 					});
 				}

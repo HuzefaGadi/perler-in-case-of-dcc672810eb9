@@ -1,4 +1,4 @@
-package com.lazydroid.incaseof;
+package com.esspro.ico;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -16,6 +16,7 @@ import android.widget.EditText;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.Toast;
+
 
 
 public class SettingsActivity extends ActionBarActivity {
@@ -38,13 +39,13 @@ public class SettingsActivity extends ActionBarActivity {
         addressBook = (Button) findViewById(R.id.address_book);
         emailAddresses = (EditText) findViewById(R.id.emailAddress);
         password = (EditText)findViewById(R.id.password);
-        preferences = getSharedPreferences(InCaseOfApp.PREFERENCES, MODE_PRIVATE);
+        preferences = getSharedPreferences(com.esspro.ico.InCaseOfApp.PREFERENCES, MODE_PRIVATE);
         edit = preferences.edit();
-        emailAddresses.setText(preferences.getString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, ""));
-        interval.setText(preferences.getInt(InCaseOfApp.SHOOTING_INTERVAL, 2) + "");
-        exposure.setSelection(preferences.getInt(InCaseOfApp.SHOOTING_EXPOSURE, 0));
-        password.setText(preferences.getString(InCaseOfApp.PASSWORD,"000000"));
-        int flash = preferences.getInt(InCaseOfApp.SHOOTING_FLASH, 0);
+        emailAddresses.setText(preferences.getString(com.esspro.ico.InCaseOfApp.SHOOTING_EMAIL_ADDRESS, ""));
+        interval.setText(preferences.getInt(com.esspro.ico.InCaseOfApp.SHOOTING_INTERVAL, 2) + "");
+        exposure.setSelection(preferences.getInt(com.esspro.ico.InCaseOfApp.SHOOTING_EXPOSURE, 0));
+        password.setText(preferences.getString(com.esspro.ico.InCaseOfApp.PASSWORD,"000000"));
+        int flash = preferences.getInt(com.esspro.ico.InCaseOfApp.SHOOTING_FLASH, 0);
         switch (flash) {
             case 1:
 
@@ -87,11 +88,11 @@ public class SettingsActivity extends ActionBarActivity {
                         flash = 0;
                         break;
                 }
-                edit.putInt(InCaseOfApp.SHOOTING_INTERVAL, Integer.parseInt(interval.getText().toString()));
-                edit.putInt(InCaseOfApp.SHOOTING_FLASH, flash);
-                edit.putInt(InCaseOfApp.SHOOTING_EXPOSURE,exposure.getSelectedItemPosition());
-                edit.putString(InCaseOfApp.SHOOTING_EMAIL_ADDRESS, emailAddresses.getText().toString().trim());
-                edit.putString(InCaseOfApp.PASSWORD,password.getText().toString());
+                edit.putInt(com.esspro.ico.InCaseOfApp.SHOOTING_INTERVAL, Integer.parseInt(interval.getText().toString()));
+                edit.putInt(com.esspro.ico.InCaseOfApp.SHOOTING_FLASH, flash);
+                edit.putInt(com.esspro.ico.InCaseOfApp.SHOOTING_EXPOSURE,exposure.getSelectedItemPosition());
+                edit.putString(com.esspro.ico.InCaseOfApp.SHOOTING_EMAIL_ADDRESS, emailAddresses.getText().toString().trim());
+                edit.putString(com.esspro.ico.InCaseOfApp.PASSWORD,password.getText().toString());
                 edit.commit();
 
                 Toast.makeText(getApplicationContext(), "Saved successfully", Toast.LENGTH_LONG).show();
